@@ -1,8 +1,11 @@
 const { useState } = React;
 
-const Feed = ({ posts, newPostText, setNewPostText, onCreate, onDelete, onViewProfile, onAddComment }) => {
-    // Tracks what is being typed in the comment box for each individual post
+const Feed = ({ posts, newPostText, setNewPostText, onCreate, onDelete, onViewProfile, onAddComment, onEditPost, onEditComment }) => {
     const [commentTexts, setCommentTexts] = useState({});
+    
+    // States to track which item is currently being edited
+    const [editingPost, setEditingPost] = useState(null); // { id, text }
+    const [editingComment, setEditingComment] = useState(null); // { postId, commentId, text }
 
     const handleCommentChange = (postId, text) => {
         setCommentTexts(prev => ({...prev, [postId]: text}));
@@ -49,32 +52,83 @@ const Feed = ({ posts, newPostText, setNewPostText, onCreate, onDelete, onViewPr
                             <div style={{ fontSize: '0.75rem', color: '#666' }}>{post.time}</div>
                         </div>
 
-                        {post.author === "Anirudh Chopra" && (
-                            <button 
-                                onClick={() => onDelete(post._id)}
-                                style={{ background: 'none', border: 'none', color: '#999', fontSize: '1.2rem', cursor: 'pointer', padding: '5px' }}
-                                title="Delete Post"
-                            >
-                                🗑️
-                            </button>
+                        {/* EDIT and DELETE Post Buttons */}
+                        {post.author === "Anirudh Chopra" && !post._id.startsWith('L') && (
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                                <button 
+                                    onClick={() => setEditingPost({ id: post._id, text: post.text })}
+                                    style={{ background: 'none', border: 'none', color: '#999', fontSize: '1rem', cursor: 'pointer' }}
+                                    title="Edit Post"
+                                >✏️</button>
+                                <button 
+                                    onClick={() => onDelete(post._id)}
+                                    style={{ background: 'none', border: 'none', color: '#999', fontSize: '1rem', cursor: 'pointer' }}
+                                    title="Delete Post"
+                                >🗑️</button>
+                            </div>
                         )}
                     </div>
                     
                     {/* Post Content */}
                     <div style={{ padding: '0 16px 12px' }}>
-                        <p style={{ fontSize: '0.9rem', marginBottom: '10px' }}>{post.text}</p>
+                        {/* If this post is being edited, show an input box. Otherwise, show normal text. */}
+                        {editingPost && editingPost.id === post._id ? (
+                            <div>
+                                <textarea 
+                                    value={editingPost.text} 
+                                    onChange={(e) => setEditingPost({...editingPost, text: e.target.value})}
+                                    style={{ width: '100%', padding: '8px', borderRadius: '8px', border: '1px solid #ccc', marginBottom: '8px' }}
+                                />
+                                <div style={{ display: 'flex', gap: '8px' }}>
+                                    <button className="btn-primary" onClick={() => { onEditPost(post._id, editingPost.text); setEditingPost(null); }}>Save</button>
+                                    <button onClick={() => setEditingPost(null)} style={{ background: '#eee', border: 'none', padding: '6px 12px', borderRadius: '20px', cursor: 'pointer' }}>Cancel</button>
+                                </div>
+                            </div>
+                        ) : (
+                            <p style={{ fontSize: '0.9rem', marginBottom: '10px' }}>{post.text}</p>
+                        )}
+                        
                         {post.postImage && (
                             <img src={post.postImage} style={{ width: '100%', borderRadius: '8px', border: '1px solid #eee' }} alt="Post content" />
                         )}
                     </div>
 
-                    {/* FEATURE 3: LINKEDIN STYLE COMMENTS SECTION */}
+                    {/* Comments Section */}
                     <div style={{ padding: '12px 16px', borderTop: '1px solid #eee', backgroundColor: '#fafafa', borderBottomLeftRadius: '8px', borderBottomRightRadius: '8px' }}>
                         {post.comments && post.comments.map((c, i) => (
-                            <div key={i} style={{ background: '#fff', padding: '8px 12px', borderRadius: '8px', marginBottom: '8px', border: '1px solid #eee' }}>
-                                <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{c.author}</span>
-                                <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: '8px' }}>{c.time}</span>
-                                <p style={{ fontSize: '0.85rem', margin: '4px 0 0', color: '#333' }}>{c.text}</p>
+                            <div key={c.id || i} style={{ background: '#fff', padding: '8px 12px', borderRadius: '8px', marginBottom: '8px', border: '1px solid #eee' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <div>
+                                        <span style={{ fontWeight: '600', fontSize: '0.85rem' }}>{c.author}</span>
+                                        <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: '8px' }}>{c.time}</span>
+                                    </div>
+                                    
+                                    {/* Edit Comment Button */}
+                                    {c.author === "Anirudh Chopra" && c.id && (
+                                        <button 
+                                            onClick={() => setEditingComment({ postId: post._id, commentId: c.id, text: c.text })}
+                                            style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '0.8rem', cursor: 'pointer' }}
+                                        >✏️</button>
+                                    )}
+                                </div>
+                                
+                                {/* Comment Edit Mode vs Normal Text */}
+                                {editingComment && editingComment.commentId === c.id ? (
+                                    <div style={{ marginTop: '5px' }}>
+                                        <input 
+                                            type="text" 
+                                            value={editingComment.text} 
+                                            onChange={(e) => setEditingComment({...editingComment, text: e.target.value})}
+                                            style={{ width: '100%', padding: '4px 8px', borderRadius: '4px', border: '1px solid #ccc', fontSize: '0.85rem', marginBottom: '5px' }}
+                                        />
+                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                            <button className="btn-primary" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={() => { onEditComment(post._id, c.id, editingComment.text); setEditingComment(null); }}>Save</button>
+                                            <button onClick={() => setEditingComment(null)} style={{ background: '#eee', border: 'none', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem', cursor: 'pointer' }}>Cancel</button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p style={{ fontSize: '0.85rem', margin: '4px 0 0', color: '#333' }}>{c.text}</p>
+                                )}
                             </div>
                         ))}
                         
