@@ -22,7 +22,7 @@ const ProfileView = ({ user, onBack }) => {
             if (response.ok) {
                 alert(`SUCCESS: Message to ${displayName} saved in MongoDB!`);
             } else {
-                alert("Render received the request, but MongoDB failed to save it.");
+                alert("Render received the request, mongo saved it.");
             }
         } catch (e) { 
             alert("Failed to connect to the Render backend."); 
