@@ -1,8 +1,34 @@
-const ProfileView = ({ user, onBack, onMessage }) => {
+const ProfileView = ({ user, onBack }) => {
     // Failsafe so the screen never goes white
     if (!user) return <div className="card">Loading profile...</div>;
 
     const displayName = user.name || "User";
+
+    const handleDirectMessage = async () => {
+        const txt = prompt(`Message ${displayName}:`);
+        if (!txt || !txt.trim()) return;
+        
+        try {
+            const response = await fetch("https://networx-api-69n9.onrender.com/api/messages/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ 
+                    sender: "Anirudh Chopra", 
+                    receiver: displayName, 
+                    text: txt 
+                })
+            });
+            
+            if (response.ok) {
+                alert(`SUCCESS: Message to ${displayName} saved in MongoDB!`);
+            } else {
+                alert("Render received the request, but MongoDB failed to save it.");
+            }
+        } catch (e) { 
+            alert("Failed to connect to the Render backend."); 
+            console.error("Network error:", e);
+        }
+    };
 
     return (
         <section className="profile-view" style={{ width: '100%', maxWidth: '800px', animation: 'fadeIn 0.3s ease' }}>
@@ -41,7 +67,7 @@ const ProfileView = ({ user, onBack, onMessage }) => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                        <button className="btn-primary" onClick={onMessage}>Message</button>
+                        <button className="btn-primary" onClick={handleDirectMessage}>Message</button>
                         <button onClick={onBack} style={{ padding: '8px 16px', borderRadius: '20px', border: '1px solid #666', background: 'white', cursor: 'pointer' }}>
                             Back to Feed
                         </button>
