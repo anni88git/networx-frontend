@@ -1,5 +1,7 @@
 const { useState, useEffect } = React;
 const INTRO_SOUND = new Audio("./assets/intro.mp3");
+
+// The real API URL with the /api prefix
 const API_BASE_URL = "https://networx-api-69n9.onrender.com/api";
 
 function App() {
@@ -28,7 +30,6 @@ function App() {
     }, [isLoggedIn]);
 
     const fetchPosts = async () => {
-        // The original 5 legacy posts
         const legacyPosts = [
             { _id: "L5", author: "Yash Mahindroo", time: "1h ago", avatar: "./assets/users/yash.jpeg", text: "Sharing some critical references for our latest project modules.", postImage: "./assets/posts/post5.jpeg" },
             { _id: "L4", author: "Rishav", time: "3h ago", avatar: "", text: "Finalized the system architecture for the full-stack software design.", postImage: "./assets/posts/post4.webp" },
@@ -40,7 +41,6 @@ function App() {
         try {
             const response = await fetch(`${API_BASE_URL}/posts/`);
             const dbPosts = await response.json();
-            // DB posts first, then legacy
             setPosts([...dbPosts, ...legacyPosts]);
         } catch (err) {
             console.warn("Backend offline, using legacy posts.");
@@ -51,7 +51,6 @@ function App() {
     // --- 3. CORE HANDLERS ---
     const handleLogin = (e) => {
         e.preventDefault();
-        // Play the sound and trigger the N overlay
         INTRO_SOUND.play().catch(() => console.log("Audio play blocked by browser"));
         setIsIntroActive(true);
         setTimeout(() => { 
@@ -69,19 +68,45 @@ function App() {
         } catch (err) { console.error("Search Error"); }
     };
 
+    // FEATURE 2: CONNECT BUTTON LOGIC
+    const handleConnect = async (userId) => {
+        // Instantly update the UI so it feels lightning fast
+        setNetwork(prevNetwork => prevNetwork.map(user => 
+            user._id === userId ? { ...user, status: "Requested" } : user
+        ));
+
+        // Send the request to MongoDB in the background
+        // Note: For legacy users without real Mongo IDs, this bypasses the fetch to prevent 500 errors
+        if (userId.toString().startsWith('10')) return; 
+
+        try {
+            await fetch(`${API_BASE_URL}/users/connect`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ targetId: userId })
+            });
+        } catch (err) {
+            console.error("Failed to send connection request", err);
+        }
+    };
+
     const handleSendMessage = async (name) => {
         const txt = prompt(`Message ${name}:`);
         if (!txt || !txt.trim()) return;
+        
         try {
-            await fetch(`${API_BASE_URL}/messages/send`, {
+            const response = await fetch(`${API_BASE_URL}/messages/send`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ sender: "Anirudh Chopra", receiver: name, text: txt })
             });
-            alert(`Message to ${name} saved in MongoDB!`);
-        } catch (e) { alert("Failed to save message."); }
+            if (response.ok) alert(`Message to ${name} saved in MongoDB!`);
+        } catch (e) { 
+            alert("Failed to connect to the Render API."); 
+        }
     };
 
+    // FEATURE 1: LIVE CREATE POST
     const handleCreatePost = async (e) => {
         e.preventDefault();
         if (!newPostText.trim()) return;
@@ -92,34 +117,28 @@ function App() {
                 body: JSON.stringify({author:"Anirudh Chopra", text:newPostText, avatar:"", postImage:"", time:"Just now"})
             });
             setNewPostText("");
-            fetchPosts();
+            fetchPosts(); // Instantly syncs the UI with MongoDB
         } catch (err) { console.error(err); }
     };
 
-    // The New Delete Logic
+    // FEATURE 1: LIVE DELETE POST
     const handleDeletePost = async (postId) => {
-        // If it's a legacy post (ID starts with 'L'), just hide it locally
         if (postId.toString().startsWith('L')) {
             setPosts(posts.filter(p => p._id !== postId));
             return;
         }
-
-        // If it's a real post, delete from DB
         try {
             const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
                 method: "DELETE"
             });
             if (response.ok) {
-                setPosts(posts.filter(p => p._id !== postId));
-            } else {
-                alert("Failed to delete post from database.");
+                setPosts(posts.filter(p => p._id !== postId)); // Instantly syncs the UI
             }
         } catch (err) {
             console.error("Delete error:", err);
         }
     };
 
-    // Standardizes the user object so ProfileView never crashes
     const handleViewProfile = (data) => {
         const userToDisplay = {
             ...data,
@@ -179,7 +198,7 @@ function App() {
 
                 <SidebarRight 
                     network={network} 
-                    onConnect={() => {}} 
+                    onConnect={handleConnect} 
                     onViewProfile={handleViewProfile}
                 />
             </main>
