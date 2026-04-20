@@ -1,11 +1,10 @@
 const { useState } = React;
 
-const Feed = ({ posts, newPostText, setNewPostText, onCreate, onDelete, onViewProfile, onAddComment, onEditPost, onEditComment }) => {
+const Feed = ({ posts, newPostText, setNewPostText, onCreate, onDelete, onViewProfile, onAddComment, onEditPost, onEditComment, onDeleteComment }) => {
     const [commentTexts, setCommentTexts] = useState({});
     
-    // States to track which item is currently being edited
-    const [editingPost, setEditingPost] = useState(null); // { id, text }
-    const [editingComment, setEditingComment] = useState(null); // { postId, commentId, text }
+    const [editingPost, setEditingPost] = useState(null); 
+    const [editingComment, setEditingComment] = useState(null); 
 
     const handleCommentChange = (postId, text) => {
         setCommentTexts(prev => ({...prev, [postId]: text}));
@@ -52,14 +51,16 @@ const Feed = ({ posts, newPostText, setNewPostText, onCreate, onDelete, onViewPr
                             <div style={{ fontSize: '0.75rem', color: '#666' }}>{post.time}</div>
                         </div>
 
-                        {/* EDIT and DELETE Post Buttons */}
-                        {post.author === "Anirudh Chopra" && !post._id.startsWith('L') && (
+                        {/* FIX: DELETE is always visible. EDIT is only visible on new DB posts */}
+                        {post.author === "Anirudh Chopra" && (
                             <div style={{ display: 'flex', gap: '5px' }}>
-                                <button 
-                                    onClick={() => setEditingPost({ id: post._id, text: post.text })}
-                                    style={{ background: 'none', border: 'none', color: '#999', fontSize: '1rem', cursor: 'pointer' }}
-                                    title="Edit Post"
-                                >✏️</button>
+                                {!post._id.startsWith('L') && (
+                                    <button 
+                                        onClick={() => setEditingPost({ id: post._id, text: post.text })}
+                                        style={{ background: 'none', border: 'none', color: '#999', fontSize: '1rem', cursor: 'pointer' }}
+                                        title="Edit Post"
+                                    >✏️</button>
+                                )}
                                 <button 
                                     onClick={() => onDelete(post._id)}
                                     style={{ background: 'none', border: 'none', color: '#999', fontSize: '1rem', cursor: 'pointer' }}
@@ -71,7 +72,6 @@ const Feed = ({ posts, newPostText, setNewPostText, onCreate, onDelete, onViewPr
                     
                     {/* Post Content */}
                     <div style={{ padding: '0 16px 12px' }}>
-                        {/* If this post is being edited, show an input box. Otherwise, show normal text. */}
                         {editingPost && editingPost.id === post._id ? (
                             <div>
                                 <textarea 
@@ -103,16 +103,23 @@ const Feed = ({ posts, newPostText, setNewPostText, onCreate, onDelete, onViewPr
                                         <span style={{ fontSize: '0.75rem', color: '#666', marginLeft: '8px' }}>{c.time}</span>
                                     </div>
                                     
-                                    {/* Edit Comment Button */}
+                                    {/* FIX: Edit AND Delete Comment Buttons */}
                                     {c.author === "Anirudh Chopra" && c.id && (
-                                        <button 
-                                            onClick={() => setEditingComment({ postId: post._id, commentId: c.id, text: c.text })}
-                                            style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '0.8rem', cursor: 'pointer' }}
-                                        >✏️</button>
+                                        <div style={{ display: 'flex', gap: '5px' }}>
+                                            <button 
+                                                onClick={() => setEditingComment({ postId: post._id, commentId: c.id, text: c.text })}
+                                                style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '0.8rem', cursor: 'pointer' }}
+                                                title="Edit Comment"
+                                            >✏️</button>
+                                            <button 
+                                                onClick={() => onDeleteComment(post._id, c.id)}
+                                                style={{ background: 'none', border: 'none', color: '#aaa', fontSize: '0.8rem', cursor: 'pointer' }}
+                                                title="Delete Comment"
+                                            >🗑️</button>
+                                        </div>
                                     )}
                                 </div>
                                 
-                                {/* Comment Edit Mode vs Normal Text */}
                                 {editingComment && editingComment.commentId === c.id ? (
                                     <div style={{ marginTop: '5px' }}>
                                         <input 
