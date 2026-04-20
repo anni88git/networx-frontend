@@ -1,17 +1,14 @@
 const { useState, useEffect } = React;
 const INTRO_SOUND = new Audio("./assets/intro.mp3");
 
-// The real API URL with the /api prefix
 const API_BASE_URL = "https://networx-api-69n9.onrender.com/api";
 
 function App() {
-    // --- 1. STATE MANAGEMENT ---
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isIntroActive, setIsIntroActive] = useState(false);
     const [currentView, setCurrentView] = useState('home'); 
     const [selectedUser, setSelectedUser] = useState(null);
 
-    // Sidebar Network (The original squad)
     const initialNetwork = [
         { _id: "101", name: "Anik Acharjee", role: "Professor", avatar: "./assets/users/anik.jpeg", status: "Connect" },
         { _id: "103", name: "Akanshu Goel", role: "Technical Lead", avatar: "./assets/users/akanshu.jpeg", status: "Connect" },
@@ -24,18 +21,17 @@ function App() {
     const [posts, setPosts] = useState([]);
     const [newPostText, setNewPostText] = useState("");
 
-    // --- 2. FETCH DATA ON LOGIN ---
     useEffect(() => {
         if (isLoggedIn) fetchPosts();
     }, [isLoggedIn]);
 
     const fetchPosts = async () => {
         const legacyPosts = [
-            { _id: "L5", author: "Yash Mahindroo", time: "1h ago", avatar: "./assets/users/yash.jpeg", text: "Sharing some critical references for our latest project modules.", postImage: "./assets/posts/post5.jpeg" },
-            { _id: "L4", author: "Rishav", time: "3h ago", avatar: "", text: "Finalized the system architecture for the full-stack software design.", postImage: "./assets/posts/post4.webp" },
-            { _id: "L3", author: "Akanshu Goel", time: "5h ago", avatar: "./assets/users/akanshu.jpeg", text: "The Real Story of Generative AI: My Breakthrough Insights. A well-crafted prompt isn’t just input—it’s intelligent intent.", postImage: "./assets/posts/post3.jpeg" },
-            { _id: "L2", author: "Anik Acharjee", time: "1d ago", avatar: "./assets/users/anik.jpeg", text: "Honored to receive this certification in Advanced Machine Learning.", postImage: "./assets/posts/post2.jpeg" },
-            { _id: "L1", author: "Anirudh Chopra", time: "2d ago", avatar: "", text: "Deep dive into Large Language Models today. Here is the flowchart.", postImage: "./assets/posts/post1.jpeg" }
+            { _id: "L5", author: "Yash Mahindroo", time: "1h ago", avatar: "./assets/users/yash.jpeg", text: "Sharing some critical references for our latest project modules.", postImage: "./assets/posts/post5.jpeg", comments: [] },
+            { _id: "L4", author: "Rishav", time: "3h ago", avatar: "", text: "Finalized the system architecture for the full-stack software design.", postImage: "./assets/posts/post4.webp", comments: [] },
+            { _id: "L3", author: "Akanshu Goel", time: "5h ago", avatar: "./assets/users/akanshu.jpeg", text: "The Real Story of Generative AI: My Breakthrough Insights. A well-crafted prompt isn’t just input—it’s intelligent intent.", postImage: "./assets/posts/post3.jpeg", comments: [] },
+            { _id: "L2", author: "Anik Acharjee", time: "1d ago", avatar: "./assets/users/anik.jpeg", text: "Honored to receive this certification in Advanced Machine Learning.", postImage: "./assets/posts/post2.jpeg", comments: [] },
+            { _id: "L1", author: "Anirudh Chopra", time: "2d ago", avatar: "", text: "Deep dive into Large Language Models today. Here is the flowchart.", postImage: "./assets/posts/post1.jpeg", comments: [] }
         ];
 
         try {
@@ -48,7 +44,6 @@ function App() {
         }
     };
 
-    // --- 3. CORE HANDLERS ---
     const handleLogin = (e) => {
         e.preventDefault();
         INTRO_SOUND.play().catch(() => console.log("Audio play blocked by browser"));
@@ -68,15 +63,10 @@ function App() {
         } catch (err) { console.error("Search Error"); }
     };
 
-    // FEATURE 2: CONNECT BUTTON LOGIC
     const handleConnect = async (userId) => {
-        // Instantly update the UI so it feels lightning fast
         setNetwork(prevNetwork => prevNetwork.map(user => 
             user._id === userId ? { ...user, status: "Requested" } : user
         ));
-
-        // Send the request to MongoDB in the background
-        // Note: For legacy users without real Mongo IDs, this bypasses the fetch to prevent 500 errors
         if (userId.toString().startsWith('10')) return; 
 
         try {
@@ -93,7 +83,6 @@ function App() {
     const handleSendMessage = async (name) => {
         const txt = prompt(`Message ${name}:`);
         if (!txt || !txt.trim()) return;
-        
         try {
             const response = await fetch(`${API_BASE_URL}/messages/send`, {
                 method: "POST",
@@ -106,7 +95,6 @@ function App() {
         }
     };
 
-    // FEATURE 1: LIVE CREATE POST
     const handleCreatePost = async (e) => {
         e.preventDefault();
         if (!newPostText.trim()) return;
@@ -117,11 +105,10 @@ function App() {
                 body: JSON.stringify({author:"Anirudh Chopra", text:newPostText, avatar:"", postImage:"", time:"Just now"})
             });
             setNewPostText("");
-            fetchPosts(); // Instantly syncs the UI with MongoDB
+            fetchPosts(); 
         } catch (err) { console.error(err); }
     };
 
-    // FEATURE 1: LIVE DELETE POST
     const handleDeletePost = async (postId) => {
         if (postId.toString().startsWith('L')) {
             setPosts(posts.filter(p => p._id !== postId));
@@ -132,10 +119,39 @@ function App() {
                 method: "DELETE"
             });
             if (response.ok) {
-                setPosts(posts.filter(p => p._id !== postId)); // Instantly syncs the UI
+                setPosts(posts.filter(p => p._id !== postId)); 
             }
         } catch (err) {
             console.error("Delete error:", err);
+        }
+    };
+
+    // FEATURE 3: LIVE COMMENTS LOGIC
+    const handleAddComment = async (postId, text) => {
+        if (!text.trim()) return;
+
+        if (postId.toString().startsWith('L')) {
+            setPosts(posts.map(p => {
+                if (p._id === postId) {
+                    const newComments = p.comments ? [...p.comments] : [];
+                    newComments.push({ author: "Anirudh Chopra", text, time: "Just now" });
+                    return { ...p, comments: newComments };
+                }
+                return p;
+            }));
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/posts/${postId}/comment`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ author: "Anirudh Chopra", text: text, time: "Just now" })
+            });
+            
+            if (response.ok) fetchPosts();
+        } catch (error) {
+            console.error("Failed to post comment", error);
         }
     };
 
@@ -150,7 +166,6 @@ function App() {
         window.scrollTo(0, 0);
     };
 
-    // --- 4. RENDER SCREENS ---
     if (isIntroActive) {
         return <div className="intro-overlay"><div className="intro-n">N</div></div>;
     }
@@ -187,6 +202,7 @@ function App() {
                         onCreate={handleCreatePost}
                         onDelete={handleDeletePost} 
                         onViewProfile={handleViewProfile}
+                        onAddComment={handleAddComment}
                     />
                 ) : (
                     <ProfileView 
