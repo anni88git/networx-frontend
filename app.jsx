@@ -48,10 +48,7 @@ function App() {
         e.preventDefault();
         INTRO_SOUND.play().catch(() => console.log("Audio play blocked by browser"));
         setIsIntroActive(true);
-        setTimeout(() => { 
-            setIsIntroActive(false); 
-            setIsLoggedIn(true); 
-        }, 1800);
+        setTimeout(() => { setIsIntroActive(false); setIsLoggedIn(true); }, 1800);
     };
 
     const handleSearch = async (query) => {
@@ -75,9 +72,7 @@ function App() {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ targetId: userId })
             });
-        } catch (err) {
-            console.error("Failed to send connection request", err);
-        }
+        } catch (err) { console.error(err); }
     };
 
     const handleSendMessage = async (name) => {
@@ -90,9 +85,7 @@ function App() {
                 body: JSON.stringify({ sender: "Anirudh Chopra", receiver: name, text: txt })
             });
             if (response.ok) alert(`Message to ${name} saved in MongoDB!`);
-        } catch (e) { 
-            alert("Failed to connect to the Render API."); 
-        }
+        } catch (e) { alert("Failed to connect to the Render API."); }
     };
 
     const handleCreatePost = async (e) => {
@@ -111,65 +104,62 @@ function App() {
 
     const handleDeletePost = async (postId) => {
         if (postId.toString().startsWith('L')) {
-            setPosts(posts.filter(p => p._id !== postId));
-            return;
+            setPosts(posts.filter(p => p._id !== postId)); return;
         }
         try {
-            const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
-                method: "DELETE"
-            });
-            if (response.ok) {
-                setPosts(posts.filter(p => p._id !== postId)); 
-            }
-        } catch (err) {
-            console.error("Delete error:", err);
-        }
+            const response = await fetch(`${API_BASE_URL}/posts/${postId}`, { method: "DELETE" });
+            if (response.ok) setPosts(posts.filter(p => p._id !== postId)); 
+        } catch (err) { console.error(err); }
     };
 
-    // FEATURE 3: LIVE COMMENTS LOGIC
     const handleAddComment = async (postId, text) => {
         if (!text.trim()) return;
-
-        if (postId.toString().startsWith('L')) {
-            setPosts(posts.map(p => {
-                if (p._id === postId) {
-                    const newComments = p.comments ? [...p.comments] : [];
-                    newComments.push({ author: "Anirudh Chopra", text, time: "Just now" });
-                    return { ...p, comments: newComments };
-                }
-                return p;
-            }));
-            return;
-        }
-
+        if (postId.toString().startsWith('L')) return; // Disabled for legacy for safety
+        
         try {
             const response = await fetch(`${API_BASE_URL}/posts/${postId}/comment`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ author: "Anirudh Chopra", text: text, time: "Just now" })
             });
-            
             if (response.ok) fetchPosts();
-        } catch (error) {
-            console.error("Failed to post comment", error);
-        }
+        } catch (error) { console.error(error); }
+    };
+
+    // --- FEATURE 4: THE EDITING LOGIC ---
+    const handleEditPost = async (postId, newText) => {
+        if (postId.toString().startsWith('L') || !newText.trim()) return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: newText })
+            });
+            if (response.ok) fetchPosts();
+        } catch (err) { console.error(err); }
+    };
+
+    const handleEditComment = async (postId, commentId, newText) => {
+        if (postId.toString().startsWith('L') || !commentId || !newText.trim()) return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/posts/${postId}/comment/${commentId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ text: newText })
+            });
+            if (response.ok) fetchPosts();
+        } catch (err) { console.error(err); }
     };
 
     const handleViewProfile = (data) => {
-        const userToDisplay = {
-            ...data,
-            name: data.name || data.author, 
-            avatar: data.avatar || ""
-        };
+        const userToDisplay = { ...data, name: data.name || data.author, avatar: data.avatar || "" };
         setSelectedUser(userToDisplay);
         setCurrentView('profile');
         window.scrollTo(0, 0);
     };
 
-    if (isIntroActive) {
-        return <div className="intro-overlay"><div className="intro-n">N</div></div>;
-    }
-
+    if (isIntroActive) return <div className="intro-overlay"><div className="intro-n">N</div></div>;
+    
     if (!isLoggedIn) {
         return (
             <div className="login-container">
@@ -203,6 +193,8 @@ function App() {
                         onDelete={handleDeletePost} 
                         onViewProfile={handleViewProfile}
                         onAddComment={handleAddComment}
+                        onEditPost={handleEditPost}         // NEW
+                        onEditComment={handleEditComment}   // NEW
                     />
                 ) : (
                     <ProfileView 
@@ -212,11 +204,7 @@ function App() {
                     />
                 )}
 
-                <SidebarRight 
-                    network={network} 
-                    onConnect={handleConnect} 
-                    onViewProfile={handleViewProfile}
-                />
+                <SidebarRight network={network} onConnect={handleConnect} onViewProfile={handleViewProfile} />
             </main>
         </div>
     );
