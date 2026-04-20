@@ -1,6 +1,6 @@
 const { useState, useEffect } = React;
 const INTRO_SOUND = new Audio("./assets/intro.mp3");
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+const API_BASE_URL = "https://networx-api-69n9.onrender.com/api";
 
 function App() {
     // --- 1. STATE MANAGEMENT ---
