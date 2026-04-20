@@ -113,9 +113,7 @@ function App() {
     };
 
     const handleAddComment = async (postId, text) => {
-        if (!text.trim()) return;
-        if (postId.toString().startsWith('L')) return; // Disabled for legacy for safety
-        
+        if (!text.trim() || postId.toString().startsWith('L')) return; 
         try {
             const response = await fetch(`${API_BASE_URL}/posts/${postId}/comment`, {
                 method: "POST",
@@ -126,7 +124,6 @@ function App() {
         } catch (error) { console.error(error); }
     };
 
-    // --- FEATURE 4: THE EDITING LOGIC ---
     const handleEditPost = async (postId, newText) => {
         if (postId.toString().startsWith('L') || !newText.trim()) return;
         try {
@@ -146,6 +143,17 @@ function App() {
                 method: "PUT",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ text: newText })
+            });
+            if (response.ok) fetchPosts();
+        } catch (err) { console.error(err); }
+    };
+
+    // --- FIX: ADDED DELETE COMMENT ---
+    const handleDeleteComment = async (postId, commentId) => {
+        if (postId.toString().startsWith('L') || !commentId) return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/posts/${postId}/comment/${commentId}`, {
+                method: "DELETE"
             });
             if (response.ok) fetchPosts();
         } catch (err) { console.error(err); }
@@ -193,8 +201,9 @@ function App() {
                         onDelete={handleDeletePost} 
                         onViewProfile={handleViewProfile}
                         onAddComment={handleAddComment}
-                        onEditPost={handleEditPost}         // NEW
-                        onEditComment={handleEditComment}   // NEW
+                        onEditPost={handleEditPost}         
+                        onEditComment={handleEditComment}   
+                        onDeleteComment={handleDeleteComment} // <-- Passed down here
                     />
                 ) : (
                     <ProfileView 
