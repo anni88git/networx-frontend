@@ -1,367 +1,312 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Home, Users, MessageSquare, Bell, Search, 
-  Image, Video, Calendar, ThumbsUp, MessageCircle, 
-  Share2, Send, Bookmark, TrendingUp, LogOut, Loader2 
-} from 'lucide-react';
 
 const API_BASE = "https://networx-api-69n9.onrender.com";
 
+// --- HARDCODED DUMMY DATA ---
+const INITIAL_POSTS = [
+  {
+    _id: "mock1", author: "Satya Nadella",
+    text: "Thrilled to announce our new integrations with OpenAI. The future of developer productivity is here, and it's powered by AI.",
+    created_at: "1h ago", likes: 1420
+  },
+  {
+    _id: "mock2", author: "Guido van Rossum",
+    text: "Just reviewed the new FastAPI updates. Astonishing how quickly the Python web ecosystem is evolving. Great work to the team!",
+    created_at: "3h ago", likes: 890
+  },
+  {
+    _id: "mock3", author: "Anirudh Chopra",
+    text: "Launched Networx V1! 🚀 Built with React, FastAPI, and MongoDB. The intro animation alone was worth the CSS grind.",
+    created_at: "5h ago", likes: 234
+  }
+];
+
+const SUGGESTED_USERS = [
+  { id: "u1", name: "Sam Altman", role: "CEO @ OpenAI" },
+  { id: "u2", name: "Linus Torvalds", role: "Creator of Linux" },
+  { id: "u3", name: "Lex Fridman", role: "AI Researcher & Podcaster" }
+];
+
 export default function App() {
-  // User state (null = show Sign Up page; object = logged in)
+  // --- STATE ---
+  const [showIntro, setShowIntro] = useState(true);
   const [user, setUser] = useState(null);
+  const [isSignUp, setIsSignUp] = useState(true);
   
-  // Auth Form State
-  const [signUpData, setSignUpData] = useState({ username: '', email: '', password: '' });
-  const [authError, setAuthError] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
-
-  // Feed State
-  const [posts, setPosts] = useState([]);
+  const [authData, setAuthData] = useState({ username: '', email: '', password: '' });
+  const [posts, setPosts] = useState(INITIAL_POSTS);
   const [newPostText, setNewPostText] = useState('');
-  const [postLoading, setPostLoading] = useState(false);
-  const [likedPosts, setLikedPosts] = useState({});
+  const [connectedUsers, setConnectedUsers] = useState({});
 
-  // 1. Fetch Posts from Backend
+  // --- 1. INTRO ANIMATION LOGIC ---
+  useEffect(() => {
+    // Hide intro after the 1.8s animation completes
+    const timer = setTimeout(() => setShowIntro(false), 2200);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // --- 2. FETCH REAL POSTS ---
   const fetchPosts = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/posts`);
       if (res.ok) {
         const data = await res.json();
-        setPosts(data);
+        // Merge real backend posts with hardcoded posts for a full feed
+        if (data.length > 0) setPosts([...data, ...INITIAL_POSTS]);
       }
     } catch (err) {
-      console.error("Failed to fetch posts:", err);
+      console.log("Backend offline, relying on hardcoded posts.");
     }
   };
 
   useEffect(() => {
-    if (user) {
-      fetchPosts();
-    }
+    if (user) fetchPosts();
   }, [user]);
 
-  // 2. Handle Sign Up
-  const handleSignUp = async (e) => {
+  // --- 3. AUTHENTICATION LOGIC ---
+  const handleAuth = async (e) => {
     e.preventDefault();
-    setAuthError('');
-    setAuthLoading(true);
-
-    try {
-      const res = await fetch(`${API_BASE}/api/signup`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: signUpData.username,
-          email: signUpData.email,
-          password: signUpData.password
-        })
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        // Successfully registered -> Log user in and switch to Feed view
-        setUser({
-          username: signUpData.username,
-          email: signUpData.email,
-          headline: "Software Developer | Networx Member"
+    if (isSignUp) {
+      try {
+        const res = await fetch(`${API_BASE}/api/signup`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(authData)
         });
-      } else {
-        setAuthError(data.detail || "Sign up failed. Please try again.");
+        if (res.ok) {
+          setUser({ username: authData.username, headline: "Software Engineer | Networx" });
+        } else alert("Signup failed, check backend.");
+      } catch (err) {
+        // Fallback for UI testing if backend is asleep
+        setUser({ username: authData.username || "Guest", headline: "Software Engineer | Networx" });
       }
-    } catch (err) {
-      setAuthError("Could not connect to backend server. Make sure it is awake.");
-    } finally {
-      setAuthLoading(false);
+    } else {
+      // Dummy Login simulation
+      setUser({ username: authData.username || "Test User", headline: "Software Engineer | Networx" });
     }
   };
 
-  // 3. Handle Creating a Post
+  // --- 4. POST CREATION LOGIC ---
   const handleCreatePost = async (e) => {
     e.preventDefault();
     if (!newPostText.trim()) return;
 
-    setPostLoading(true);
-    const postPayload = {
+    const dummyPost = {
+      _id: Date.now().toString(),
       author: user.username,
-      headline: user.headline,
-      text: newPostText
+      text: newPostText,
+      created_at: "Just now",
+      likes: 0
     };
 
+    setPosts([dummyPost, ...posts]); // Optimistic UI update
+    setNewPostText('');
+
     try {
-      const res = await fetch(`${API_BASE}/api/posts`, {
+      await fetch(`${API_BASE}/api/posts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(postPayload)
+        body: JSON.stringify({
+          author: user.username,
+          headline: user.headline,
+          text: newPostText
+        })
       });
-
-      if (res.ok) {
-        setNewPostText('');
-        await fetchPosts(); // Refresh feed to show new post
-      } else {
-        alert("Failed to create post. Check FastAPI backend logs.");
-      }
-    } catch (err) {
-      console.error("Error creating post:", err);
-    } finally {
-      setPostLoading(false);
-    }
+    } catch (err) { console.error("Failed to sync post to backend", err); }
   };
 
-  const toggleLike = (postId) => {
-    setLikedPosts(prev => ({ ...prev, [postId]: !prev[postId] }));
+  const handleConnect = (id) => {
+    setConnectedUsers(prev => ({ ...prev, [id]: true }));
   };
+
 
   // ==========================================
-  // VIEW 1: SIGN UP SCREEN (If not logged in)
+  // VIEW 1: INTRO ANIMATION
+  // ==========================================
+  if (showIntro) {
+    return (
+      <div className="intro-overlay">
+        <div className="intro-n">N</div>
+      </div>
+    );
+  }
+
+  // ==========================================
+  // VIEW 2: LOGIN / SIGNUP SCREEN
   // ==========================================
   if (!user) {
     return (
-      <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col justify-center items-center px-4">
-        <div className="w-full max-w-md bg-[#1e293b] border border-slate-700/60 rounded-2xl p-8 shadow-xl">
-          
-          <div className="flex flex-col items-center mb-6">
-            <div className="bg-indigo-600 text-white font-black text-2xl px-3 py-1 rounded-lg tracking-wider mb-2">
-              Networx
-            </div>
-            <h1 className="text-xl font-bold text-slate-100">Make the most of your professional life</h1>
+      <div className="login-container">
+        <div className="login-wrapper">
+          <div className="login-hero">
+            <h1>Networx</h1>
+            <p>Welcome to your professional community.</p>
           </div>
-
-          {authError && (
-            <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-lg mb-4">
-              {authError}
-            </div>
-          )}
-
-          <form onSubmit={handleSignUp} className="space-y-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Username</label>
+          <div className="login-card">
+            <h2 style={{ marginBottom: '20px' }}>{isSignUp ? "Sign Up" : "Sign In"}</h2>
+            <form onSubmit={handleAuth}>
               <input 
-                type="text"
-                required
-                placeholder="e.g. anni88"
-                value={signUpData.username}
-                onChange={(e) => setSignUpData({ ...signUpData, username: e.target.value })}
-                className="w-full bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                type="text" 
+                placeholder="Username" 
+                required 
+                value={authData.username}
+                onChange={(e) => setAuthData({...authData, username: e.target.value})}
               />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+              {isSignUp && (
+                <input 
+                  type="email" 
+                  placeholder="Email" 
+                  required 
+                  value={authData.email}
+                  onChange={(e) => setAuthData({...authData, email: e.target.value})}
+                />
+              )}
               <input 
-                type="email"
-                required
-                placeholder="anirudh@example.com"
-                value={signUpData.email}
-                onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
-                className="w-full bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+                type="password" 
+                placeholder="Password" 
+                required 
+                value={authData.password}
+                onChange={(e) => setAuthData({...authData, password: e.target.value})}
               />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
-              <input 
-                type="password"
-                required
-                placeholder="••••••••"
-                value={signUpData.password}
-                onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
-                className="w-full bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={authLoading}
-              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-full transition-colors flex justify-center items-center gap-2 mt-2"
-            >
-              {authLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Agree & Join Networx"}
-            </button>
-          </form>
-
+              <button type="submit" className="btn-primary" style={{ width: '100%' }}>
+                {isSignUp ? "Agree & Join" : "Sign In"}
+              </button>
+            </form>
+            <p style={{ marginTop: '15px', fontSize: '0.9rem', textAlign: 'center' }}>
+              {isSignUp ? "Already on Networx? " : "New to Networx? "}
+              <span 
+                style={{ color: 'var(--nx-blue)', cursor: 'pointer', fontWeight: 'bold' }} 
+                onClick={() => setIsSignUp(!isSignUp)}
+              >
+                {isSignUp ? "Sign in" : "Join now"}
+              </span>
+            </p>
+          </div>
         </div>
       </div>
     );
   }
 
   // ==========================================
-  // VIEW 2: MAIN LINKEDIN FEED (If logged in)
+  // VIEW 3: MAIN DASHBOARD FEED
   // ==========================================
   return (
-    <div className="min-h-screen bg-[#0f172a] text-slate-100 font-sans">
-      
-      {/* Top Navbar */}
-      <header className="sticky top-0 z-50 bg-[#1e293b] border-b border-slate-700/60 px-4 py-2">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          
-          <div className="flex items-center gap-3">
-            <div className="bg-indigo-600 text-white font-black text-xl px-2.5 py-1 rounded-md tracking-wider">
-              N
-            </div>
-            <div className="relative hidden sm:block">
-              <Search className="absolute left-3 top-2.5 text-slate-400 w-4 h-4" />
-              <input 
-                type="text" 
-                placeholder="Search Networx..."
-                className="bg-[#0f172a] text-sm text-slate-200 pl-9 pr-4 py-1.5 rounded-md border border-slate-700 focus:outline-none focus:border-indigo-500 w-64"
-              />
-            </div>
+    <>
+      {/* Navbar mapped to your CSS */}
+      <header className="dashboard-header">
+        <div className="header-content">
+          <a className="logo">Networx</a>
+          <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+            <span style={{ cursor: 'pointer', fontWeight: 600 }}>Home</span>
+            <span style={{ cursor: 'pointer', color: 'var(--text-muted)' }}>Network</span>
+            <span style={{ cursor: 'pointer', color: 'var(--text-muted)' }}>Messaging</span>
+            <button className="btn-primary" onClick={() => setUser(null)} style={{ padding: '0.4rem 1rem' }}>
+              Sign Out
+            </button>
           </div>
-
-          <nav className="flex items-center gap-6">
-            <button className="flex flex-col items-center gap-1 text-xs text-indigo-400 border-b-2 border-indigo-400 pb-1">
-              <Home className="w-5 h-5" /> Home
-            </button>
-            <button className="flex flex-col items-center gap-1 text-xs text-slate-400 hover:text-slate-200">
-              <Users className="w-5 h-5" /> Network
-            </button>
-            <button className="flex flex-col items-center gap-1 text-xs text-slate-400 hover:text-slate-200">
-              <MessageSquare className="w-5 h-5" /> Messaging
-            </button>
-            <button className="flex flex-col items-center gap-1 text-xs text-slate-400 hover:text-slate-200">
-              <Bell className="w-5 h-5" /> Notifications
-            </button>
-            
-            <div className="h-6 w-px bg-slate-700"></div>
-
-            <button 
-              onClick={() => setUser(null)}
-              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 font-medium"
-            >
-              <LogOut className="w-4 h-4" /> Sign Out
-            </button>
-          </nav>
-
         </div>
       </header>
 
-      {/* 3-Column Layout */}
-      <main className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+      {/* Main Grid mapped to your CSS */}
+      <main className="dashboard-main">
         
-        {/* Left Profile Card */}
-        <aside className="lg:col-span-3">
-          <div className="bg-[#1e293b] rounded-xl border border-slate-700/60 overflow-hidden shadow-sm">
-            <div className="h-16 bg-gradient-to-r from-indigo-600 to-purple-600"></div>
-            <div className="px-4 pb-4 relative">
-              <div className="w-14 h-14 rounded-full bg-indigo-600 border-4 border-[#1e293b] -mt-7 mb-2 flex items-center justify-center font-bold text-lg text-white">
-                {user.username[0]?.toUpperCase()}
-              </div>
-              <h2 className="font-bold text-base text-slate-100">{user.username}</h2>
-              <p className="text-xs text-slate-400 leading-snug mt-0.5">{user.headline}</p>
-              
-              <hr className="my-3 border-slate-700/60" />
-
-              <div className="space-y-2 text-xs text-slate-400">
-                <div className="flex justify-between">
-                  <span>Profile views</span>
-                  <span className="text-indigo-400 font-semibold">1</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Connections</span>
-                  <span className="text-indigo-400 font-semibold">0</span>
-                </div>
-              </div>
+        {/* Left Sidebar */}
+        <aside>
+          <div className="card" style={{ textAlign: 'center', paddingBottom: '1rem' }}>
+            <div className="profile-banner"></div>
+            <div className="profile-avatar-main">
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+            <h3 style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{user.username}</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', padding: '0 10px' }}>
+              {user.headline}
+            </p>
+            <hr style={{ margin: '15px 0', border: 'none', borderTop: '1px solid var(--border)' }}/>
+            <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 15px', fontSize: '0.85rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Connections</span>
+              <span style={{ color: 'var(--nx-blue)', fontWeight: 'bold' }}>42</span>
             </div>
           </div>
         </aside>
 
-        {/* Center Feed Column */}
-        <section className="lg:col-span-6 space-y-4">
-          
+        {/* Center Feed */}
+        <section>
           {/* Post Composer */}
-          <div className="bg-[#1e293b] rounded-xl border border-slate-700/60 p-4 shadow-sm">
-            <div className="flex gap-3">
-              <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white shrink-0">
-                {user.username[0]?.toUpperCase()}
+          <div className="card" style={{ padding: '1rem' }}>
+            <div style={{ display: 'flex', gap: '10px' }}>
+              <div className="post-avatar">
+                {user.username.charAt(0).toUpperCase()}
               </div>
-              <input 
-                type="text" 
-                placeholder="Start a post..."
-                value={newPostText}
-                onChange={(e) => setNewPostText(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleCreatePost(e)}
-                className="w-full bg-[#0f172a] text-slate-200 placeholder-slate-400 text-sm rounded-full px-4 py-2 border border-slate-700 focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-700/50 text-xs text-slate-400">
-              <div className="flex gap-4">
-                <span className="flex items-center gap-1 cursor-pointer hover:text-indigo-400"><Image className="w-4 h-4 text-sky-400" /> Photo</span>
-                <span className="flex items-center gap-1 cursor-pointer hover:text-indigo-400"><Video className="w-4 h-4 text-emerald-400" /> Video</span>
-              </div>
-              <button 
-                onClick={handleCreatePost}
-                disabled={postLoading || !newPostText.trim()}
-                className="bg-indigo-600 disabled:opacity-50 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-full font-medium transition-colors"
-              >
-                {postLoading ? "Posting..." : "Post"}
-              </button>
+              <form onSubmit={handleCreatePost} style={{ flex: 1, display: 'flex', gap: '10px' }}>
+                <input 
+                  type="text" 
+                  placeholder="Start a post..." 
+                  value={newPostText}
+                  onChange={(e) => setNewPostText(e.target.value)}
+                  style={{ 
+                    flex: 1, padding: '12px 20px', borderRadius: '30px', 
+                    border: '1px solid var(--border)', fontSize: '0.95rem' 
+                  }}
+                />
+                <button type="submit" className="btn-primary" disabled={!newPostText.trim()}>
+                  Post
+                </button>
+              </form>
             </div>
           </div>
 
           {/* Posts Feed */}
-          {posts.length === 0 ? (
-            <div className="bg-[#1e293b] rounded-xl border border-slate-700/60 p-8 text-center text-slate-400 text-sm">
-              No posts yet. Be the first to share something above! 🚀
+          {posts.map(post => (
+            <div className="card" key={post._id} style={{ padding: '1rem' }}>
+              <div style={{ display: 'flex', gap: '10px', marginBottom: '10px' }}>
+                <div className="post-avatar">
+                  {post.author.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h4 style={{ margin: 0 }}>{post.author}</h4>
+                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {post.created_at || "Just now"}
+                  </p>
+                </div>
+              </div>
+              <p style={{ fontSize: '0.95rem', lineHeight: '1.5' }}>
+                {post.text}
+              </p>
+              <hr style={{ margin: '15px 0', border: 'none', borderTop: '1px solid var(--border)' }}/>
+              <div style={{ display: 'flex', gap: '20px', color: 'var(--text-muted)', fontSize: '0.9rem', fontWeight: 600 }}>
+                <span style={{ cursor: 'pointer' }}>👍 Like {post.likes ? `(${post.likes})` : ''}</span>
+                <span style={{ cursor: 'pointer' }}>💬 Comment</span>
+                <span style={{ cursor: 'pointer' }}>🔁 Repost</span>
+              </div>
             </div>
-          ) : (
-            posts.map((post) => (
-              <article key={post._id} className="bg-[#1e293b] rounded-xl border border-slate-700/60 p-4 shadow-sm space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold">
-                    {post.author ? post.author[0].toUpperCase() : 'U'}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm text-slate-100">{post.author}</h3>
-                    <p className="text-xs text-slate-400">{post.headline || "Networx Member"}</p>
-                  </div>
-                </div>
-
-                <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-line">
-                  {post.text}
-                </p>
-
-                <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-700/50">
-                  <button 
-                    onClick={() => toggleLike(post._id)}
-                    className={`flex items-center gap-1.5 hover:text-indigo-400 py-1.5 px-3 rounded-md hover:bg-slate-800 transition-colors ${likedPosts[post._id] ? 'text-indigo-400 font-semibold' : ''}`}
-                  >
-                    <ThumbsUp className="w-4 h-4" /> Like
-                  </button>
-                  <button className="flex items-center gap-1.5 hover:text-indigo-400 py-1.5 px-3 rounded-md hover:bg-slate-800 transition-colors">
-                    <MessageCircle className="w-4 h-4" /> Comment
-                  </button>
-                  <button className="flex items-center gap-1.5 hover:text-indigo-400 py-1.5 px-3 rounded-md hover:bg-slate-800 transition-colors">
-                    <Share2 className="w-4 h-4" /> Repost
-                  </button>
-                </div>
-              </article>
-            ))
-          )}
-
+          ))}
         </section>
 
-        {/* Right Sidebar */}
-        <aside className="lg:col-span-3 hidden lg:block">
-          <div className="bg-[#1e293b] rounded-xl border border-slate-700/60 p-4 shadow-sm">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-sm text-slate-200">Networx News</h3>
-              <TrendingUp className="w-4 h-4 text-slate-400" />
-            </div>
-            <ul className="space-y-3 text-xs">
-              <li className="cursor-pointer group">
-                <p className="font-medium text-slate-300 group-hover:text-indigo-400 transition-colors">FastAPI Backend Live</p>
-                <span className="text-[11px] text-slate-500">Connected to Render</span>
-              </li>
-              <li className="cursor-pointer group">
-                <p className="font-medium text-slate-300 group-hover:text-indigo-400 transition-colors">Vercel Deployment Ready</p>
-                <span className="text-[11px] text-slate-500">Continuous Integration Active</span>
-              </li>
-            </ul>
+        {/* Right Sidebar - Hardcoded Connections */}
+        <aside>
+          <div className="card" style={{ padding: '1rem' }}>
+            <h3 style={{ fontSize: '1rem', marginBottom: '10px' }}>Add to your feed</h3>
+            {SUGGESTED_USERS.map(u => (
+              <div className="connection-row" key={u.id}>
+                <div className="post-avatar" style={{ width: '40px', height: '40px', fontSize: '1rem' }}>
+                  {u.name.charAt(0)}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <h4 style={{ fontSize: '0.9rem', margin: 0 }}>{u.name}</h4>
+                  <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', margin: '2px 0 5px' }}>{u.role}</p>
+                  <button 
+                    className={`btn-connect ${connectedUsers[u.id] ? 'requested' : ''}`}
+                    onClick={() => handleConnect(u.id)}
+                  >
+                    {connectedUsers[u.id] ? 'Pending' : '+ Follow'}
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         </aside>
 
       </main>
-    </div>
+    </>
   );
 }
