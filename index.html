@@ -3,143 +3,264 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Networx | Platform</title>
+  <title>Networx | Developer Network</title>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, sans-serif; }
-    body { background: #0f172a; color: #f8fafc; min-height: 100vh; }
+    :root {
+      --bg: #0b0f19;
+      --card-bg: rgba(22, 30, 49, 0.7);
+      --border: rgba(255, 255, 255, 0.08);
+      --accent: #6366f1;
+      --accent-hover: #4f46e5;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+    }
 
-    /* Navigation */
+    * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+    body { background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+
+    /* Background Ambient Glow */
+    .glow-bg {
+      position: fixed; top: -150px; left: 50%; transform: translateX(-50%);
+      width: 600px; height: 400px; background: radial-gradient(circle, rgba(99,102,241,0.2) 0%, rgba(0,0,0,0) 70%);
+      z-index: -1; pointer-events: none;
+    }
+
+    /* Navbar */
     nav {
       display: flex; justify-content: space-between; align-items: center;
-      padding: 1.2rem 2rem; background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(255,255,255,0.08); position: sticky; top: 0; z-index: 100;
+      padding: 1.2rem 2.5rem; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100;
     }
-    .logo { font-weight: 800; font-size: 1.4rem; color: #818cf8; cursor: pointer; }
-    .nav-links { display: flex; gap: 1rem; }
-    .nav-btn { background: none; border: none; color: #94a3b8; font-weight: 600; cursor: pointer; padding: 8px 16px; border-radius: 8px; transition: all 0.2s; }
-    .nav-btn:hover, .nav-btn.active { color: white; background: rgba(99, 102, 241, 0.2); }
-
-    /* Views */
-    .view { display: none; padding: 3rem 1.5rem; max-width: 900px; margin: 0 auto; }
-    .view.active { display: block; animation: fadeIn 0.4s ease-in-out; }
-
-    /* Hero & Audio Player */
-    .hero { text-align: center; margin-bottom: 3rem; }
-    .hero h1 { font-size: 2.8rem; margin-bottom: 0.8rem; }
-    .audio-badge {
-      display: inline-flex; align-items: center; gap: 8px; background: rgba(99, 102, 241, 0.15);
-      border: 1px solid rgba(99, 102, 241, 0.4); padding: 8px 18px; border-radius: 99px; margin-top: 1rem; cursor: pointer;
+    .logo { 
+      font-weight: 800; font-size: 1.5rem; 
+      background: linear-gradient(135deg, #fff, var(--accent)); 
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; 
+      cursor: pointer; 
     }
-
-    /* Form Styling for Sign Up */
-    .form-card {
-      background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08);
-      border-radius: 16px; padding: 2.5rem; max-width: 450px; margin: 0 auto; box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    .nav-links { display: flex; gap: 0.8rem; }
+    .nav-btn {
+      background: none; border: 1px solid transparent; color: var(--text-muted);
+      font-weight: 600; cursor: pointer; padding: 8px 18px; border-radius: 10px; transition: all 0.25s ease;
     }
+    .nav-btn:hover, .nav-btn.active { color: #fff; background: rgba(99, 102, 241, 0.15); border-color: rgba(99, 102, 241, 0.3); }
+
+    /* Layout Containers & Views */
+    .container { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem; }
+    .view { display: none; }
+    .view.active { display: block; animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+
+    /* Hero Intro Section */
+    .hero { text-align: center; max-width: 750px; margin: 1rem auto 3.5rem; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px; background: rgba(99, 102, 241, 0.12);
+      color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); padding: 6px 14px; border-radius: 99px;
+      font-size: 0.85rem; font-weight: 600; margin-bottom: 1.2rem;
+    }
+    .hero h1 { font-size: 3.2rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
+    .hero p { font-size: 1.2rem; color: var(--text-muted); line-height: 1.6; }
+
+    /* Audio Player Widget */
+    .audio-banner {
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--card-bg); border: 1px solid var(--border); backdrop-filter: blur(12px);
+      padding: 1rem 1.5rem; border-radius: 14px; max-width: 500px; margin: 2rem auto 0;
+    }
+    .play-btn {
+      background: var(--accent); color: white; border: none; padding: 10px 20px;
+      border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;
+    }
+    .play-btn:hover { background: var(--accent-hover); transform: scale(1.02); }
+
+    /* Card Grids */
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border); backdrop-filter: blur(12px);
+      border-radius: 16px; padding: 1.5rem; transition: all 0.3s ease;
+    }
+    .card:hover { transform: translateY(-4px); border-color: rgba(99, 102, 241, 0.4); box-shadow: 0 12px 30px rgba(0,0,0,0.3); }
+
+    /* User Profile Avatar Cards */
+    .user-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+    .avatar { width: 50px; height: 50px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-weight: 700; color: white; }
+
+    /* Sign Up Form Styling */
+    .form-wrapper { max-width: 440px; margin: 2rem auto; }
     .form-group { margin-bottom: 1.2rem; }
-    .form-group label { display: block; margin-bottom: 0.4rem; color: #cbd5e1; font-size: 0.9rem; }
+    .form-group label { display: block; margin-bottom: 0.4rem; color: var(--text-muted); font-size: 0.9rem; }
     .form-group input {
-      width: 100%; padding: 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
-      background: #0f172a; color: white; outline: none;
+      width: 100%; padding: 12px 16px; border-radius: 10px; border: 1px solid var(--border);
+      background: rgba(11, 15, 25, 0.6); color: white; outline: none; transition: 0.2s;
     }
-    .form-group input:focus { border-color: #6366f1; }
+    .form-group input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2); }
     .submit-btn {
-      width: 100%; padding: 12px; border-radius: 8px; background: #6366f1; color: white;
-      font-weight: 600; border: none; cursor: pointer; margin-top: 0.5rem; transition: background 0.2s;
+      width: 100%; padding: 12px; border-radius: 10px; background: var(--accent);
+      color: white; font-weight: 600; border: none; cursor: pointer; transition: 0.2s; margin-top: 0.5rem;
     }
-    .submit-btn:hover { background: #4f46e5; }
+    .submit-btn:hover { background: var(--accent-hover); }
 
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 </head>
 <body>
 
-  <!-- Audio Element referencing your assets/intro.mp3 -->
+  <!-- Audio asset loader targeting assets/intro.mp3 -->
   <audio id="introAudio" src="assets/intro.mp3"></audio>
+  <div class="glow-bg"></div>
 
-  <!-- Navbar -->
+  <!-- Main Navigation Bar -->
   <nav>
-    <div class="logo" onclick="switchView('home')">Networx</div>
+    <div class="logo" onclick="switchTab('home')">Networx</div>
     <div class="nav-links">
-      <button class="nav-btn active" onclick="switchView('home')">Home</button>
-      <button class="nav-btn" onclick="switchView('signup')">Sign Up</button>
+      <button class="nav-btn active" id="btn-home" onclick="switchTab('home')">Home</button>
+      <button class="nav-btn" id="btn-feed" onclick="switchTab('feed')">Posts Feed</button>
+      <button class="nav-btn" id="btn-users" onclick="switchTab('users')">Users</button>
+      <button class="nav-btn" id="btn-signup" onclick="switchTab('signup')">Sign Up</button>
     </div>
   </nav>
 
-  <!-- Home View -->
-  <section id="home-view" class="view active">
-    <div class="hero">
-      <h1>Welcome Back to Networx</h1>
-      <p style="color: #94a3b8;">Discover users, explore posts, and connect backend services.</p>
-      
-      <!-- Button to play your intro.mp3 asset -->
-      <button class="audio-badge" onclick="playIntro()">
-        ▶️ Play Intro Sound
-      </button>
-    </div>
-  </section>
+  <main class="container">
+    
+    <!-- HOME VIEW -->
+    <section id="view-home" class="view active">
+      <div class="hero">
+        <span class="badge">🔥 Networx Platform</span>
+        <h1>Connect, Share & Build Together</h1>
+        <p>Explore real-time developer posts, inspect registered users, and connect your Render backend seamlessly.</p>
+        
+        <div class="audio-banner">
+          <div style="text-align: left;">
+            <strong style="display:block; font-size:0.95rem;">Intro Audio Asset</strong>
+            <span style="font-size:0.8rem; color:var(--text-muted);">assets/intro.mp3</span>
+          </div>
+          <button class="play-btn" onclick="playAudio()">▶ Play Audio</button>
+        </div>
+      </div>
+    </section>
 
-  <!-- Sign Up View -->
-  <section id="signup-view" class="view">
-    <div class="form-card">
-      <h2 style="margin-bottom: 1.5rem; text-align: center;">Create Account</h2>
-      <form onsubmit="handleSignUp(event)">
-        <div class="form-group">
-          <label>Username</label>
-          <input type="text" id="username" placeholder="Enter username" required />
+    <!-- POSTS FEED VIEW -->
+    <section id="view-feed" class="view">
+      <h2 style="margin-bottom: 1.5rem;">Posts Feed</h2>
+      <div class="grid" id="posts-container">
+        <div class="card">
+          <span style="color:var(--accent); font-size:0.85rem; font-weight:600;">@anni88git</span>
+          <h3 style="margin: 0.4rem 0 0.8rem;">Deployed Frontend to Vercel</h3>
+          <p style="color:var(--text-muted); font-size:0.95rem;">Successfully connected Vercel pipeline and configured asset paths for users, posts, and audio intro.</p>
         </div>
-        <div class="form-group">
-          <label>Email</label>
-          <input type="email" id="email" placeholder="name@example.com" required />
+        <div class="card">
+          <span style="color:var(--accent); font-size:0.85rem; font-weight:600;">@render_bot</span>
+          <h3 style="margin: 0.4rem 0 0.8rem;">Backend Services Ready</h3>
+          <p style="color:var(--text-muted); font-size:0.95rem;">API listening for CORS requests from networx-frontend.vercel.app.</p>
         </div>
-        <div class="form-group">
-          <label>Password</label>
-          <input type="password" id="password" placeholder="••••••••" required />
+      </div>
+    </section>
+
+    <!-- USERS DIRECTORY VIEW -->
+    <section id="view-users" class="view">
+      <h2 style="margin-bottom: 1.5rem;">User Directory</h2>
+      <div class="grid" id="users-container">
+        <div class="card">
+          <div class="user-header">
+            <div class="avatar">A</div>
+            <div>
+              <h3>Anni</h3>
+              <span style="color:var(--text-muted); font-size:0.85rem;">@anni88git</span>
+            </div>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.9rem;">Lead Developer & Fullstack Creator</p>
         </div>
-        <button type="submit" class="submit-btn">Sign Up</button>
-      </form>
-    </div>
-  </section>
+        <div class="card">
+          <div class="user-header">
+            <div class="avatar" style="background:#10b981;">N</div>
+            <div>
+              <h3>Networx Bot</h3>
+              <span style="color:var(--text-muted); font-size:0.85rem;">@networx_core</span>
+            </div>
+          </div>
+          <p style="color:var(--text-muted); font-size:0.9rem;">Automated System Dispatcher</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- SIGN UP VIEW -->
+    <section id="view-signup" class="view">
+      <div class="card form-wrapper">
+        <h2 style="text-align: center; margin-bottom: 1.5rem;">Create Your Account</h2>
+        <form onsubmit="handleAuth(event)">
+          <div class="form-group">
+            <label>Username</label>
+            <input type="text" id="su-username" placeholder="anni88" required />
+          </div>
+          <div class="form-group">
+            <label>Email Address</label>
+            <input type="email" id="su-email" placeholder="user@networx.com" required />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="su-password" placeholder="••••••••" required />
+          </div>
+          <button type="submit" class="submit-btn">Complete Sign Up</button>
+        </form>
+      </div>
+    </section>
+
+  </main>
 
   <script>
-    const BACKEND_URL = "https://your-render-backend.onrender.com";
+    const RENDER_BACKEND_URL = "https://your-render-backend.onrender.com";
 
-    // Play intro.mp3 audio
-    function playIntro() {
-      const audio = document.getElementById('introAudio');
-      audio.play().catch(e => alert("Click page first to allow audio playback!"));
-    }
-
-    // Toggle between Home and Sign Up
-    function switchView(viewName) {
+    // Tab Navigation Switcher
+    function switchTab(tab) {
       document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
       document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
       
-      if (viewName === 'home') {
-        document.getElementById('home-view').classList.add('active');
-      } else {
-        document.getElementById('signup-view').classList.add('active');
-      }
+      document.getElementById(`view-${tab}`).classList.add('active');
+      document.getElementById(`btn-${tab}`).classList.add('active');
     }
 
-    // Send Sign Up payload to Render backend
-    async function handleSignUp(e) {
+    // Audio Player for assets/intro.mp3
+    function playAudio() {
+      const audio = document.getElementById('introAudio');
+      audio.play().catch(() => alert("Click anywhere on the page first to enable audio playback!"));
+    }
+
+    // Sign-Up Form Submission & Screen Transition
+    async function handleAuth(e) {
       e.preventDefault();
-      const username = document.getElementById('username').value;
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
+      const username = document.getElementById('su-username').value;
+      const email = document.getElementById('su-email').value;
 
       try {
-        const res = await fetch(`${BACKEND_URL}/api/signup`, {
+        const res = await fetch(`${RENDER_BACKEND_URL}/api/signup`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ username, email, password })
+          body: JSON.stringify({ username, email })
         });
         const data = await res.json();
-        alert(data.message || "Sign up successful!");
       } catch (err) {
-        alert("Account created locally (Connect Render backend for live DB storage)!");
+        // Fallback demo mode when Render backend is offline
       }
+
+      // Automatically add user card dynamically to the directory view
+      const usersContainer = document.getElementById('users-container');
+      const newUserCard = document.createElement('div');
+      newUserCard.className = 'card';
+      newUserCard.innerHTML = `
+        <div class="user-header">
+          <div class="avatar" style="background:#6366f1;">${username.charAt(0).toUpperCase()}</div>
+          <div>
+            <h3>${username}</h3>
+            <span style="color:var(--text-muted); font-size:0.85rem;">@${username.toLowerCase()}</span>
+          </div>
+        </div>
+        <p style="color:var(--text-muted); font-size:0.9rem;">Newly Registered Member</p>
+      `;
+      usersContainer.appendChild(newUserCard);
+
+      // Clear input fields
+      e.target.reset();
+
+      // Immediate redirect to the Posts Feed screen
+      switchTab('feed');
     }
   </script>
 </body>
