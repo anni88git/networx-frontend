@@ -59,18 +59,6 @@
     .hero h1 { font-size: 3.2rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem; }
     .hero p { font-size: 1.2rem; color: var(--text-muted); line-height: 1.6; }
 
-    /* Audio Player Widget */
-    .audio-banner {
-      display: flex; align-items: center; justify-content: space-between;
-      background: var(--card-bg); border: 1px solid var(--border); backdrop-filter: blur(12px);
-      padding: 1rem 1.5rem; border-radius: 14px; max-width: 500px; margin: 2rem auto 0;
-    }
-    .play-btn {
-      background: var(--accent); color: white; border: none; padding: 10px 20px;
-      border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s;
-    }
-    .play-btn:hover { background: var(--accent-hover); transform: scale(1.02); }
-
     /* Card Grids */
     .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
     .card {
@@ -103,8 +91,6 @@
 </head>
 <body>
 
-  <!-- Audio asset loader targeting assets/intro.mp3 -->
-  <audio id="introAudio" src="assets/intro.mp3"></audio>
   <div class="glow-bg"></div>
 
   <!-- Main Navigation Bar -->
@@ -126,14 +112,6 @@
         <span class="badge">🔥 Networx Platform</span>
         <h1>Connect, Share & Build Together</h1>
         <p>Explore real-time developer posts, inspect registered users, and connect your Render backend seamlessly.</p>
-        
-        <div class="audio-banner">
-          <div style="text-align: left;">
-            <strong style="display:block; font-size:0.95rem;">Intro Audio Asset</strong>
-            <span style="font-size:0.8rem; color:var(--text-muted);">assets/intro.mp3</span>
-          </div>
-          <button class="play-btn" onclick="playAudio()">▶ Play Audio</button>
-        </div>
       </div>
     </section>
 
@@ -144,7 +122,7 @@
         <div class="card">
           <span style="color:var(--accent); font-size:0.85rem; font-weight:600;">@anni88git</span>
           <h3 style="margin: 0.4rem 0 0.8rem;">Deployed Frontend to Vercel</h3>
-          <p style="color:var(--text-muted); font-size:0.95rem;">Successfully connected Vercel pipeline and configured asset paths for users, posts, and audio intro.</p>
+          <p style="color:var(--text-muted); font-size:0.95rem;">Successfully connected Vercel pipeline and configured API routes.</p>
         </div>
         <div class="card">
           <span style="color:var(--accent); font-size:0.85rem; font-weight:600;">@render_bot</span>
@@ -206,7 +184,7 @@
   </main>
 
   <script>
-    const RENDER_BACKEND_URL = "https://your-render-backend.onrender.com";
+    const RENDER_BACKEND_URL = "https://networx-api-69n9.onrender.com";
 
     // Tab Navigation Switcher
     function switchTab(tab) {
@@ -215,12 +193,6 @@
       
       document.getElementById(`view-${tab}`).classList.add('active');
       document.getElementById(`btn-${tab}`).classList.add('active');
-    }
-
-    // Audio Player for assets/intro.mp3
-    function playAudio() {
-      const audio = document.getElementById('introAudio');
-      audio.play().catch(() => alert("Click anywhere on the page first to enable audio playback!"));
     }
 
     // Sign-Up Form Submission & Screen Transition
@@ -237,7 +209,7 @@
         });
         const data = await res.json();
       } catch (err) {
-        // Fallback demo mode when Render backend is offline
+        // Fallback execution when Render backend is waking up
       }
 
       // Automatically add user card dynamically to the directory view
