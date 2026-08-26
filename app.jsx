@@ -1,231 +1,367 @@
-const { useState, useEffect } = React;
+import React, { useState, useEffect } from 'react';
+import { 
+  Home, Users, MessageSquare, Bell, Search, 
+  Image, Video, Calendar, ThumbsUp, MessageCircle, 
+  Share2, Send, Bookmark, TrendingUp, LogOut, Loader2 
+} from 'lucide-react';
 
-const API_BASE_URL = "https://networx-api-69n9.onrender.com";
+const API_BASE = "https://networx-api-69n9.onrender.com";
 
-function App() {
-    const [isLoggedIn, setIsLoggedIn] = useState(true);
-    const [currentView, setCurrentView] = useState('home');
-    const [selectedUser, setSelectedUser] = useState(null);
+export default function App() {
+  // User state (null = show Sign Up page; object = logged in)
+  const [user, setUser] = useState(null);
+  
+  // Auth Form State
+  const [signUpData, setSignUpData] = useState({ username: '', email: '', password: '' });
+  const [authError, setAuthError] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
 
-    // Initial fallback data
-    const [network, setNetwork] = useState([
-        { _id: "101", name: "Anik Acharjee", role: "Principal Architect", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80", status: "Connect" },
-        { _id: "102", name: "Akanshu Goel", role: "Tech Lead @ HighScale", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80", status: "Connect" },
-        { _id: "103", name: "Yash Mahindroo", role: "Senior ML Infrastructure Lead", avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80", status: "Connect" },
-        { _id: "104", name: "Shrishti Pandey", role: "Distributed Systems Dev", avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80", status: "Connect" },
-        { _id: "105", name: "Rishav Kumar", role: "Backend Performance Engineer", avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80", status: "Connect" }
-    ]);
+  // Feed State
+  const [posts, setPosts] = useState([]);
+  const [newPostText, setNewPostText] = useState('');
+  const [postLoading, setPostLoading] = useState(false);
+  const [likedPosts, setLikedPosts] = useState({});
 
-    const [posts, setPosts] = useState([
-        { 
-            _id: "P1", 
-            author: "Anirudh Chopra", 
-            role: "Full-Stack & GenAI Engineer",
-            time: "2h ago", 
-            avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80", 
-            text: "Architected low-latency microservices handling 10k+ requests/sec using Node.js and Redis caching. Focused on minimizing database query bottlenecks and optimizing memory footprints for heavy payload pipelines.", 
-            tags: ["#SystemDesign", "#NodeJS", "#BackendArchitecture"],
-            likes: 42
-        }
-    ]);
+  // 1. Fetch Posts from Backend
+  const fetchPosts = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/api/posts`);
+      if (res.ok) {
+        const data = await res.json();
+        setPosts(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch posts:", err);
+    }
+  };
 
-    const [newPostText, setNewPostText] = useState("");
+  useEffect(() => {
+    if (user) {
+      fetchPosts();
+    }
+  }, [user]);
 
-    // Fetch live posts from Render backend on load
-    useEffect(() => {
-        fetch(`${API_BASE_URL}/posts`)
-            .then(res => res.json())
-            .then(data => {
-                if (Array.isArray(data) && data.length > 0) setPosts(data);
-            })
-            .catch(err => console.warn("Backend loading offline, using default feeds:", err));
-    }, []);
+  // 2. Handle Sign Up
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
 
-    const handleConnect = (id) => {
-        setNetwork(prev => prev.map(u => u._id === id ? { ...u, status: "Requested" } : u));
+    try {
+      const res = await fetch(`${API_BASE}/api/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: signUpData.username,
+          email: signUpData.email,
+          password: signUpData.password
+        })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        // Successfully registered -> Log user in and switch to Feed view
+        setUser({
+          username: signUpData.username,
+          email: signUpData.email,
+          headline: "Software Developer | Networx Member"
+        });
+      } else {
+        setAuthError(data.detail || "Sign up failed. Please try again.");
+      }
+    } catch (err) {
+      setAuthError("Could not connect to backend server. Make sure it is awake.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // 3. Handle Creating a Post
+  const handleCreatePost = async (e) => {
+    e.preventDefault();
+    if (!newPostText.trim()) return;
+
+    setPostLoading(true);
+    const postPayload = {
+      author: user.username,
+      headline: user.headline,
+      text: newPostText
     };
 
-    const handleCreatePost = async (e) => {
-        e.preventDefault();
-        if (!newPostText.trim()) return;
+    try {
+      const res = await fetch(`${API_BASE}/api/posts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(postPayload)
+      });
 
-        const payload = {
-            author: "Anirudh Chopra",
-            role: "Full-Stack & GenAI Engineer",
-            text: newPostText,
-            tags: ["#Engineering", "#Update"],
-            avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"
-        };
+      if (res.ok) {
+        setNewPostText('');
+        await fetchPosts(); // Refresh feed to show new post
+      } else {
+        alert("Failed to create post. Check FastAPI backend logs.");
+      }
+    } catch (err) {
+      console.error("Error creating post:", err);
+    } finally {
+      setPostLoading(false);
+    }
+  };
 
-        try {
-            // Post directly to live FastAPI server
-            const res = await fetch(`${API_BASE_URL}/posts`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            });
+  const toggleLike = (postId) => {
+    setLikedPosts(prev => ({ ...prev, [postId]: !prev[postId] }));
+  };
 
-            if (res.ok) {
-                const savedPost = await res.json();
-                setPosts([savedPost, ...posts]);
-            } else {
-                setPosts([{ _id: Date.now().toString(), time: "Just now", likes: 0, ...payload }, ...posts]);
-            }
-        } catch (err) {
-            setPosts([{ _id: Date.now().toString(), time: "Just now", likes: 0, ...payload }, ...posts]);
-        }
-        setNewPostText("");
-    };
-
+  // ==========================================
+  // VIEW 1: SIGN UP SCREEN (If not logged in)
+  // ==========================================
+  if (!user) {
     return (
-        <div className="min-h-screen bg-black text-zinc-100 font-sans selection:bg-zinc-800 selection:text-white flex flex-col justify-between">
-            {/* Header */}
-            <header className="sticky top-0 z-50 bg-black/70 backdrop-blur-2xl border-b border-zinc-800/80">
-                <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-3 cursor-pointer" onClick={() => setCurrentView('home')}>
-                        <div className="w-8 h-8 rounded-full bg-white text-black font-black flex items-center justify-center text-sm shadow-lg shadow-white/10">
-                            N
-                        </div>
-                        <span className="font-semibold text-lg tracking-tight text-white">Networx</span>
-                    </div>
+      <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col justify-center items-center px-4">
+        <div className="w-full max-w-md bg-[#1e293b] border border-slate-700/60 rounded-2xl p-8 shadow-xl">
+          
+          <div className="flex flex-col items-center mb-6">
+            <div className="bg-indigo-600 text-white font-black text-2xl px-3 py-1 rounded-lg tracking-wider mb-2">
+              Networx
+            </div>
+            <h1 className="text-xl font-bold text-slate-100">Make the most of your professional life</h1>
+          </div>
 
-                    <div className="flex items-center gap-6 text-sm font-medium text-zinc-400">
-                        <button onClick={() => setCurrentView('home')} className="hover:text-white transition-colors">Feed</button>
-                        <a href="https://github.com/anni88git" target="_blank" className="hover:text-white transition-colors">GitHub</a>
-                        <a href="https://www.linkedin.com/in/anirudh-chopra-05622a275" target="_blank" className="hover:text-white transition-colors">LinkedIn</a>
-                    </div>
-                </div>
-            </header>
+          {authError && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-400 text-xs p-3 rounded-lg mb-4">
+              {authError}
+            </div>
+          )}
 
-            {/* Main Content */}
-            <main className="max-w-7xl mx-auto px-6 py-8 flex-1 space-y-10 w-full">
-                <section className="space-y-4">
-                    <div className="flex justify-between items-end">
-                        <div>
-                            <h2 className="text-2xl font-semibold tracking-tight text-white">Engineered Insights</h2>
-                            <p className="text-sm text-zinc-400">Curated software design & infrastructure topics</p>
-                        </div>
-                    </div>
+          <form onSubmit={handleSignUp} className="space-y-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Username</label>
+              <input 
+                type="text"
+                required
+                placeholder="e.g. anni88"
+                value={signUpData.username}
+                onChange={(e) => setSignUpData({ ...signUpData, username: e.target.value })}
+                className="w-full bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
 
-                    <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-none snap-x">
-                        <div className="snap-start shrink-0 w-80 bg-zinc-900/80 border border-zinc-800 p-6 rounded-3xl backdrop-blur-xl hover:border-zinc-700 transition-all space-y-3">
-                            <span className="text-xs font-mono text-indigo-400 uppercase tracking-widest">Architecture</span>
-                            <h3 className="text-lg font-medium text-white">Designing High-Throughput REST APIs</h3>
-                            <p className="text-xs text-zinc-400 leading-relaxed">Implementing event-driven architectures with Node.js to achieve sub-100ms response times.</p>
-                        </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Email Address</label>
+              <input 
+                type="email"
+                required
+                placeholder="anirudh@example.com"
+                value={signUpData.email}
+                onChange={(e) => setSignUpData({ ...signUpData, email: e.target.value })}
+                className="w-full bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
 
-                        <div className="snap-start shrink-0 w-80 bg-zinc-900/80 border border-zinc-800 p-6 rounded-3xl backdrop-blur-xl hover:border-zinc-700 transition-all space-y-3">
-                            <span className="text-xs font-mono text-purple-400 uppercase tracking-widest">Databases</span>
-                            <h3 className="text-lg font-medium text-white">MongoDB Index Optimization</h3>
-                            <p className="text-xs text-zinc-400 leading-relaxed">Compound indexing strategies for instant profile lookups and fast data retrieval.</p>
-                        </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">Password</label>
+              <input 
+                type="password"
+                required
+                placeholder="••••••••"
+                value={signUpData.password}
+                onChange={(e) => setSignUpData({ ...signUpData, password: e.target.value })}
+                className="w-full bg-[#0f172a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
 
-                        <div className="snap-start shrink-0 w-80 bg-zinc-900/80 border border-zinc-800 p-6 rounded-3xl backdrop-blur-xl hover:border-zinc-700 transition-all space-y-3">
-                            <span className="text-xs font-mono text-emerald-400 uppercase tracking-widest">Generative AI</span>
-                            <h3 className="text-lg font-medium text-white">Production AI Pipelines</h3>
-                            <p className="text-xs text-zinc-400 leading-relaxed">Building fine-tuned LLM workflows with fallback mechanisms for 99.9% uptime.</p>
-                        </div>
-                    </div>
-                </section>
+            <button
+              type="submit"
+              disabled={authLoading}
+              className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-full transition-colors flex justify-center items-center gap-2 mt-2"
+            >
+              {authLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Agree & Join Networx"}
+            </button>
+          </form>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 space-y-6">
-                        <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-3xl p-5 backdrop-blur-xl space-y-4">
-                            <form onSubmit={handleCreatePost} className="space-y-3">
-                                <textarea 
-                                    value={newPostText}
-                                    onChange={(e) => setNewPostText(e.target.value)}
-                                    placeholder="Share a system design update or breakthrough..."
-                                    className="w-full bg-zinc-950/80 border border-zinc-800 rounded-2xl p-4 text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-zinc-600 transition-all resize-none"
-                                    rows="3"
-                                />
-                                <div className="flex justify-between items-center">
-                                    <span className="text-xs text-zinc-500 font-mono">Status: Connected to FastAPI / Render</span>
-                                    <button type="submit" className="bg-white hover:bg-zinc-200 text-black font-medium text-xs px-5 py-2.5 rounded-full transition-all shadow-lg shadow-white/5 active:scale-95">
-                                        Publish
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-
-                        <div className="space-y-4">
-                            {posts.map((post) => (
-                                <article key={post._id} className="bg-zinc-900/40 border border-zinc-800/60 rounded-3xl p-6 backdrop-blur-xl space-y-4 hover:border-zinc-700/60 transition-all">
-                                    <div className="flex items-center gap-3">
-                                        <img src={post.avatar} alt={post.author} className="w-10 h-10 rounded-full object-cover border border-zinc-700" />
-                                        <div>
-                                            <h4 className="text-sm font-semibold text-white">{post.author}</h4>
-                                            <p className="text-xs text-zinc-500">{post.role} • {post.time}</p>
-                                        </div>
-                                    </div>
-
-                                    <p className="text-sm text-zinc-300 leading-relaxed">{post.text}</p>
-
-                                    <div className="flex gap-2 flex-wrap">
-                                        {post.tags.map((tag, idx) => (
-                                            <span key={idx} className="text-[11px] font-mono bg-zinc-800/60 text-zinc-400 px-3 py-1 rounded-full border border-zinc-700/50">
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </article>
-                            ))}
-                        </div>
-                    </div>
-
-                    <aside className="space-y-6">
-                        <div className="bg-zinc-900/40 border border-zinc-800/60 rounded-3xl p-6 backdrop-blur-xl space-y-4">
-                            <h3 className="text-sm font-semibold text-white">Recommended Engineering Network</h3>
-                            <div className="space-y-4">
-                                {network.map((user) => (
-                                    <div key={user._id} className="flex items-center justify-between gap-3">
-                                        <div className="flex items-center gap-3">
-                                            <img src={user.avatar} alt={user.name} className="w-9 h-9 rounded-full object-cover border border-zinc-800" />
-                                            <div>
-                                                <p className="text-xs font-medium text-white">{user.name}</p>
-                                                <p className="text-[11px] text-zinc-500">{user.role}</p>
-                                            </div>
-                                        </div>
-                                        <button 
-                                            onClick={() => handleConnect(user._id)}
-                                            disabled={user.status === "Requested"}
-                                            className={`text-xs px-4 py-1.5 rounded-full transition-all ${
-                                                user.status === "Requested"
-                                                    ? "bg-zinc-800 text-zinc-500 cursor-not-allowed"
-                                                    : "bg-white text-black hover:bg-zinc-200 font-medium"
-                                            }`}
-                                        >
-                                            {user.status === "Requested" ? "Pending" : "Connect"}
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </aside>
-                </div>
-            </main>
-
-            <footer className="border-t border-zinc-800/80 bg-black/90 py-10 mt-16 backdrop-blur-2xl">
-                <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-zinc-500">
-                    <div>
-                        <p className="font-semibold text-zinc-300 text-sm">Anirudh Chopra</p>
-                        <p className="mt-1">Full-Stack Software Development & GenAI Architecture</p>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-6 text-zinc-400">
-                        <a href="mailto:anirudhc422@gmail.com" className="hover:text-white transition-colors">anirudhc422@gmail.com</a>
-                        <span>•</span>
-                        <a href="tel:+918744858415" className="hover:text-white transition-colors">+91 8744858415</a>
-                        <span>•</span>
-                        <a href="https://github.com/anni88git" target="_blank" className="hover:text-white transition-colors">GitHub</a>
-                        <span>•</span>
-                        <a href="https://www.linkedin.com/in/anirudh-chopra-05622a275" target="_blank" className="hover:text-white transition-colors">LinkedIn</a>
-                    </div>
-                </div>
-            </footer>
         </div>
+      </div>
     );
-}
+  }
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(<App />);
+  // ==========================================
+  // VIEW 2: MAIN LINKEDIN FEED (If logged in)
+  // ==========================================
+  return (
+    <div className="min-h-screen bg-[#0f172a] text-slate-100 font-sans">
+      
+      {/* Top Navbar */}
+      <header className="sticky top-0 z-50 bg-[#1e293b] border-b border-slate-700/60 px-4 py-2">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-600 text-white font-black text-xl px-2.5 py-1 rounded-md tracking-wider">
+              N
+            </div>
+            <div className="relative hidden sm:block">
+              <Search className="absolute left-3 top-2.5 text-slate-400 w-4 h-4" />
+              <input 
+                type="text" 
+                placeholder="Search Networx..."
+                className="bg-[#0f172a] text-sm text-slate-200 pl-9 pr-4 py-1.5 rounded-md border border-slate-700 focus:outline-none focus:border-indigo-500 w-64"
+              />
+            </div>
+          </div>
+
+          <nav className="flex items-center gap-6">
+            <button className="flex flex-col items-center gap-1 text-xs text-indigo-400 border-b-2 border-indigo-400 pb-1">
+              <Home className="w-5 h-5" /> Home
+            </button>
+            <button className="flex flex-col items-center gap-1 text-xs text-slate-400 hover:text-slate-200">
+              <Users className="w-5 h-5" /> Network
+            </button>
+            <button className="flex flex-col items-center gap-1 text-xs text-slate-400 hover:text-slate-200">
+              <MessageSquare className="w-5 h-5" /> Messaging
+            </button>
+            <button className="flex flex-col items-center gap-1 text-xs text-slate-400 hover:text-slate-200">
+              <Bell className="w-5 h-5" /> Notifications
+            </button>
+            
+            <div className="h-6 w-px bg-slate-700"></div>
+
+            <button 
+              onClick={() => setUser(null)}
+              className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 font-medium"
+            >
+              <LogOut className="w-4 h-4" /> Sign Out
+            </button>
+          </nav>
+
+        </div>
+      </header>
+
+      {/* 3-Column Layout */}
+      <main className="max-w-6xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        {/* Left Profile Card */}
+        <aside className="lg:col-span-3">
+          <div className="bg-[#1e293b] rounded-xl border border-slate-700/60 overflow-hidden shadow-sm">
+            <div className="h-16 bg-gradient-to-r from-indigo-600 to-purple-600"></div>
+            <div className="px-4 pb-4 relative">
+              <div className="w-14 h-14 rounded-full bg-indigo-600 border-4 border-[#1e293b] -mt-7 mb-2 flex items-center justify-center font-bold text-lg text-white">
+                {user.username[0]?.toUpperCase()}
+              </div>
+              <h2 className="font-bold text-base text-slate-100">{user.username}</h2>
+              <p className="text-xs text-slate-400 leading-snug mt-0.5">{user.headline}</p>
+              
+              <hr className="my-3 border-slate-700/60" />
+
+              <div className="space-y-2 text-xs text-slate-400">
+                <div className="flex justify-between">
+                  <span>Profile views</span>
+                  <span className="text-indigo-400 font-semibold">1</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Connections</span>
+                  <span className="text-indigo-400 font-semibold">0</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Center Feed Column */}
+        <section className="lg:col-span-6 space-y-4">
+          
+          {/* Post Composer */}
+          <div className="bg-[#1e293b] rounded-xl border border-slate-700/60 p-4 shadow-sm">
+            <div className="flex gap-3">
+              <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center font-bold text-white shrink-0">
+                {user.username[0]?.toUpperCase()}
+              </div>
+              <input 
+                type="text" 
+                placeholder="Start a post..."
+                value={newPostText}
+                onChange={(e) => setNewPostText(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreatePost(e)}
+                className="w-full bg-[#0f172a] text-slate-200 placeholder-slate-400 text-sm rounded-full px-4 py-2 border border-slate-700 focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+            <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-700/50 text-xs text-slate-400">
+              <div className="flex gap-4">
+                <span className="flex items-center gap-1 cursor-pointer hover:text-indigo-400"><Image className="w-4 h-4 text-sky-400" /> Photo</span>
+                <span className="flex items-center gap-1 cursor-pointer hover:text-indigo-400"><Video className="w-4 h-4 text-emerald-400" /> Video</span>
+              </div>
+              <button 
+                onClick={handleCreatePost}
+                disabled={postLoading || !newPostText.trim()}
+                className="bg-indigo-600 disabled:opacity-50 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-full font-medium transition-colors"
+              >
+                {postLoading ? "Posting..." : "Post"}
+              </button>
+            </div>
+          </div>
+
+          {/* Posts Feed */}
+          {posts.length === 0 ? (
+            <div className="bg-[#1e293b] rounded-xl border border-slate-700/60 p-8 text-center text-slate-400 text-sm">
+              No posts yet. Be the first to share something above! 🚀
+            </div>
+          ) : (
+            posts.map((post) => (
+              <article key={post._id} className="bg-[#1e293b] rounded-xl border border-slate-700/60 p-4 shadow-sm space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-indigo-600/30 text-indigo-400 flex items-center justify-center font-bold">
+                    {post.author ? post.author[0].toUpperCase() : 'U'}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-sm text-slate-100">{post.author}</h3>
+                    <p className="text-xs text-slate-400">{post.headline || "Networx Member"}</p>
+                  </div>
+                </div>
+
+                <p className="text-sm text-slate-200 leading-relaxed whitespace-pre-line">
+                  {post.text}
+                </p>
+
+                <div className="flex items-center justify-between text-xs text-slate-400 pt-2 border-t border-slate-700/50">
+                  <button 
+                    onClick={() => toggleLike(post._id)}
+                    className={`flex items-center gap-1.5 hover:text-indigo-400 py-1.5 px-3 rounded-md hover:bg-slate-800 transition-colors ${likedPosts[post._id] ? 'text-indigo-400 font-semibold' : ''}`}
+                  >
+                    <ThumbsUp className="w-4 h-4" /> Like
+                  </button>
+                  <button className="flex items-center gap-1.5 hover:text-indigo-400 py-1.5 px-3 rounded-md hover:bg-slate-800 transition-colors">
+                    <MessageCircle className="w-4 h-4" /> Comment
+                  </button>
+                  <button className="flex items-center gap-1.5 hover:text-indigo-400 py-1.5 px-3 rounded-md hover:bg-slate-800 transition-colors">
+                    <Share2 className="w-4 h-4" /> Repost
+                  </button>
+                </div>
+              </article>
+            ))
+          )}
+
+        </section>
+
+        {/* Right Sidebar */}
+        <aside className="lg:col-span-3 hidden lg:block">
+          <div className="bg-[#1e293b] rounded-xl border border-slate-700/60 p-4 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold text-sm text-slate-200">Networx News</h3>
+              <TrendingUp className="w-4 h-4 text-slate-400" />
+            </div>
+            <ul className="space-y-3 text-xs">
+              <li className="cursor-pointer group">
+                <p className="font-medium text-slate-300 group-hover:text-indigo-400 transition-colors">FastAPI Backend Live</p>
+                <span className="text-[11px] text-slate-500">Connected to Render</span>
+              </li>
+              <li className="cursor-pointer group">
+                <p className="font-medium text-slate-300 group-hover:text-indigo-400 transition-colors">Vercel Deployment Ready</p>
+                <span className="text-[11px] text-slate-500">Continuous Integration Active</span>
+              </li>
+            </ul>
+          </div>
+        </aside>
+
+      </main>
+    </div>
+  );
+}
