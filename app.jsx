@@ -1,11 +1,13 @@
 const { useState, useEffect } = React;
 
+const API_BASE_URL = "https://networx-api-69n9.onrender.com";
+
 function App() {
     const [isLoggedIn, setIsLoggedIn] = useState(true);
     const [currentView, setCurrentView] = useState('home');
     const [selectedUser, setSelectedUser] = useState(null);
 
-    // Hardcoded high-caliber network for instant premium presentation
+    // Initial fallback data
     const [network, setNetwork] = useState([
         { _id: "101", name: "Anik Acharjee", role: "Principal Architect", avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80", status: "Connect" },
         { _id: "102", name: "Akanshu Goel", role: "Tech Lead @ HighScale", avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80", status: "Connect" },
@@ -14,7 +16,6 @@ function App() {
         { _id: "105", name: "Rishav Kumar", role: "Backend Performance Engineer", avatar: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80", status: "Connect" }
     ]);
 
-    // Rich hardcoded technical feed
     const [posts, setPosts] = useState([
         { 
             _id: "P1", 
@@ -25,51 +26,54 @@ function App() {
             text: "Architected low-latency microservices handling 10k+ requests/sec using Node.js and Redis caching. Focused on minimizing database query bottlenecks and optimizing memory footprints for heavy payload pipelines.", 
             tags: ["#SystemDesign", "#NodeJS", "#BackendArchitecture"],
             likes: 42
-        },
-        { 
-            _id: "P2", 
-            author: "Akanshu Goel", 
-            role: "Tech Lead",
-            time: "5h ago", 
-            avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80", 
-            text: "Prompt engineering isn't just string concatenation. It's about designing deterministic state machine wrappers around stochastic LLM endpoints.", 
-            tags: ["#GenAI", "#SystemArchitecture"],
-            likes: 89
-        },
-        { 
-            _id: "P3", 
-            author: "Yash Mahindroo", 
-            role: "ML Lead",
-            time: "1d ago", 
-            avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80", 
-            text: "Fine-tuning XLM-RoBERTa for intent classification under strict <50ms SLA budgets. Optimized tokenization efficiency across multilingual inputs.", 
-            tags: ["#MachineLearning", "#NLP"],
-            likes: 124
         }
     ]);
 
     const [newPostText, setNewPostText] = useState("");
 
+    // Fetch live posts from Render backend on load
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/posts`)
+            .then(res => res.json())
+            .then(data => {
+                if (Array.isArray(data) && data.length > 0) setPosts(data);
+            })
+            .catch(err => console.warn("Backend loading offline, using default feeds:", err));
+    }, []);
+
     const handleConnect = (id) => {
         setNetwork(prev => prev.map(u => u._id === id ? { ...u, status: "Requested" } : u));
     };
 
-    const handleCreatePost = (e) => {
+    const handleCreatePost = async (e) => {
         e.preventDefault();
         if (!newPostText.trim()) return;
-        setPosts([
-            {
-                _id: Date.now().toString(),
-                author: "Anirudh Chopra",
-                role: "Full-Stack & GenAI Engineer",
-                time: "Just now",
-                avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80",
-                text: newPostText,
-                tags: ["#Engineering", "#Update"],
-                likes: 0
-            },
-            ...posts
-        ]);
+
+        const payload = {
+            author: "Anirudh Chopra",
+            role: "Full-Stack & GenAI Engineer",
+            text: newPostText,
+            tags: ["#Engineering", "#Update"],
+            avatar: "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80"
+        };
+
+        try {
+            // Post directly to live FastAPI server
+            const res = await fetch(`${API_BASE_URL}/posts`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                const savedPost = await res.json();
+                setPosts([savedPost, ...posts]);
+            } else {
+                setPosts([{ _id: Date.now().toString(), time: "Just now", likes: 0, ...payload }, ...posts]);
+            }
+        } catch (err) {
+            setPosts([{ _id: Date.now().toString(), time: "Just now", likes: 0, ...payload }, ...posts]);
+        }
         setNewPostText("");
     };
 
@@ -95,8 +99,6 @@ function App() {
 
             {/* Main Content */}
             <main className="max-w-7xl mx-auto px-6 py-8 flex-1 space-y-10 w-full">
-                
-                {/* Apple-style Slider/Carousel Banner */}
                 <section className="space-y-4">
                     <div className="flex justify-between items-end">
                         <div>
@@ -126,13 +128,8 @@ function App() {
                     </div>
                 </section>
 
-                {/* Dashboard Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    
-                    {/* Feed Column */}
                     <div className="lg:col-span-2 space-y-6">
-                        
-                        {/* New Post Card */}
                         <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-3xl p-5 backdrop-blur-xl space-y-4">
                             <form onSubmit={handleCreatePost} className="space-y-3">
                                 <textarea 
@@ -143,7 +140,7 @@ function App() {
                                     rows="3"
                                 />
                                 <div className="flex justify-between items-center">
-                                    <span className="text-xs text-zinc-500 font-mono">Status: Connected to Node/Mongo</span>
+                                    <span className="text-xs text-zinc-500 font-mono">Status: Connected to FastAPI / Render</span>
                                     <button type="submit" className="bg-white hover:bg-zinc-200 text-black font-medium text-xs px-5 py-2.5 rounded-full transition-all shadow-lg shadow-white/5 active:scale-95">
                                         Publish
                                     </button>
@@ -151,7 +148,6 @@ function App() {
                             </form>
                         </div>
 
-                        {/* Feed Posts */}
                         <div className="space-y-4">
                             {posts.map((post) => (
                                 <article key={post._id} className="bg-zinc-900/40 border border-zinc-800/60 rounded-3xl p-6 backdrop-blur-xl space-y-4 hover:border-zinc-700/60 transition-all">
@@ -177,7 +173,6 @@ function App() {
                         </div>
                     </div>
 
-                    {/* Right Sidebar */}
                     <aside className="space-y-6">
                         <div className="bg-zinc-900/40 border border-zinc-800/60 rounded-3xl p-6 backdrop-blur-xl space-y-4">
                             <h3 className="text-sm font-semibold text-white">Recommended Engineering Network</h3>
@@ -210,7 +205,6 @@ function App() {
                 </div>
             </main>
 
-            {/* Apple Minimalist Footer */}
             <footer className="border-t border-zinc-800/80 bg-black/90 py-10 mt-16 backdrop-blur-2xl">
                 <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-xs text-zinc-500">
                     <div>
