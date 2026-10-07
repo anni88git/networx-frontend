@@ -1,3 +1,5 @@
+import React from 'react';
+
 const ProfileView = ({ user, onBack }) => {
     // Failsafe so the screen never goes white
     if (!user) return <div className="card">Loading profile...</div>;
@@ -84,3 +86,5 @@ const ProfileView = ({ user, onBack }) => {
         </section>
     );
 };
+
+export default ProfileView;
